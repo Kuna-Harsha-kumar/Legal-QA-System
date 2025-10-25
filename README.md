@@ -1,5 +1,9 @@
 The current model is using CAUD database.The model can be trained only on a single document.The below are the sample results : 
 
+In the results 
+Result 1 it is the results of Intial model(XGBoost+TF-IDF)
+result 2 it is the results for pre trained model
+Result 3 is the results for comparing both the models
 
 🧾 =====================================================
 💬 QUESTION: What is the minimum commitment?
