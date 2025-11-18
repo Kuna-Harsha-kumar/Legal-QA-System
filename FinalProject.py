@@ -13,7 +13,7 @@ from google.colab import files
 uploaded = files.upload()
 
 filename = list(uploaded.keys())[0]
-print(f"✅ Uploaded file: {filename}")
+print(f"Uploaded file: {filename}")
 
 import pandas as pd
 import re
@@ -22,7 +22,6 @@ def load_any_document(file_path):
     file_path_lower = file_path.lower()
     text_content = ""
 
-    # ------------------ Excel / CSV ------------------
     if file_path_lower.endswith((".xlsx", ".xls", ".csv")):
         try:
             if file_path_lower.endswith(".csv"):
@@ -31,19 +30,18 @@ def load_any_document(file_path):
                 df = pd.read_excel(file_path)
 
             df = df.fillna('')
-            print(f"✅ Excel/CSV file loaded with shape {df.shape}. Columns: {list(df.columns)}")
+            print(f"Excel/CSV file loaded with shape {df.shape}. Columns: {list(df.columns)}")
             return "excel", df
 
         except Exception as e:
-            raise ValueError(f"❌ Failed to read spreadsheet file: {e}")
+            raise ValueError(f"Failed to read spreadsheet file: {e}")
 
-    # ------------------ PDF ------------------
     elif file_path_lower.endswith(".pdf"):
-        print("📘 Reading PDF...")
+        print("Reading PDF...")
         try:
             import pdfplumber
         except ImportError:
-            raise ImportError("❌ Missing library pdfplumber — install using: !pip install pdfplumber")
+            raise ImportError(" Missing library pdfplumber — install using: !pip install pdfplumber")
 
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
@@ -51,44 +49,36 @@ def load_any_document(file_path):
                 if page_text:  # avoid NoneType errors
                     text_content += page_text + "\n"
 
-        print(f"✅ PDF loaded, {len(text_content)} characters extracted.")
+        print(f"PDF loaded, {len(text_content)} characters extracted.")
         return "text", text_content
 
-    # ------------------ Word (.docx) ------------------
     elif file_path_lower.endswith(".docx"):
-        print("📘 Reading Word document...")
+        print("Reading Word document...")
         try:
             from docx import Document
         except ImportError:
-            raise ImportError("❌ Missing library python-docx — install using: !pip install python-docx")
+            raise ImportError(" Missing library python-docx — install using: !pip install python-docx")
 
         doc = Document(file_path)
         for para in doc.paragraphs:
             text_content += para.text + "\n"
 
-        print(f"✅ Word file loaded, {len(text_content)} characters extracted.")
+        print(f" Word file loaded, {len(text_content)} characters extracted.")
         return "text", text_content
 
-    # ------------------ Unsupported ------------------
     else:
-        raise ValueError(f"❌ Unsupported file type: {file_path}\nAllowed: Excel, Word, PDF")
+        raise ValueError(f" Unsupported file type: {file_path}\nAllowed: Excel, Word, PDF")
 
-
-# =============================
-# File Validation Before Loading
-# =============================
 if filename.lower().endswith((".xlsx", ".xls", ".csv", ".pdf", ".docx")):
     file_type, data = load_any_document(filename)
 else:
-    print(f"❌ Unsupported file type for {filename}. Please upload Excel, PDF, or Word.")
+    print(f"Unsupported file type for {filename}. Please upload Excel, PDF, or Word.")
 
 def extract_clean_clauses(file_type, data):
     import re
     from nltk.tokenize import sent_tokenize
 
     clauses = []
-
-    # Excel input (tabular)
     if file_type == "excel":
         for _, row in data.iterrows():
             row_text = " ".join([str(v) for v in row.values if str(v).strip()])
@@ -96,23 +86,19 @@ def extract_clean_clauses(file_type, data):
             for s in sent_tokenize(clean):
                 if len(s.split()) > 5:
                     clauses.append(s.strip())
-
-    # Raw PDF / text input
     else:
         clean = preprocess(data)
         for s in sent_tokenize(clean):
             if len(s.split()) > 5:
                 clauses.append(s.strip())
 
-    print(f"✔ Extracted {len(clauses)} cleaned clauses")
+    print(f" Extracted {len(clauses)} cleaned clauses")
     print(clauses)
     return clauses
 
 labels = None
 if file_type == "excel":
     df = data.copy()
-
-    # detect label column automatically
     label_col = None
     for col in df.columns:
         if df[col].dtype == object and 1 < df[col].nunique() < len(df):
@@ -120,41 +106,32 @@ if file_type == "excel":
             break
 
     if label_col:
-        print(f"🟢 Detected label column: {label_col}")
+        print(f"Detected label column: {label_col}")
 
         clean_labels = []
         for _, row in df.iterrows():
             cleaned = preprocess_text(' '.join(map(str, row.values)))
             if len(cleaned.split()) > 10:
                 clean_labels.append(str(row[label_col]))
-
-        # Do NOT align yet (clauses not created)
         labels = clean_labels
     else:
-        print("🟡 No label column found — running without labels")
+        print("No label column found — running without labels")
 else:
-    print("📄 Text file — labels not applicable")
+    print("Text file — labels not applicable")
     labels = None
-
-
-# NOW extract clauses
 clauses = extract_clean_clauses(file_type, data)
-
-
-# ALIGN HERE (after clauses exist)
 if labels:
-    print(f"🔍 Before alignment → labels: {len(labels)}, clauses: {len(clauses)}")
+    print(f"Before alignment → labels: {len(labels)}, clauses: {len(clauses)}")
     min_len = min(len(labels), len(clauses))
     labels = labels[:min_len]
     clauses = clauses[:min_len]
-    print(f"✔ After alignment → labels: {len(labels)}, clauses: {len(clauses)}")
+    print(f" After alignment → labels: {len(labels)}, clauses: {len(clauses)}")
 
 clauses = extract_clean_clauses(file_type, data)
-print(f"✔ Extracted {len(clauses)} clauses")
+print(f" Extracted {len(clauses)} clauses")
 if file_type == "excel":
     df = data   # rename correctly
 
-    # Try to detect label column
     label_col = None
     for col in df.columns:
         # rules for possible label columns
@@ -163,45 +140,45 @@ if file_type == "excel":
             break
 
     if label_col:
-        print(f"🟢 Supervised mode ON — Detected label column: {label_col}")
+        print(f" Supervised mode ON — Detected label column: {label_col}")
         labels = df[label_col].astype(str).tolist()
     else:
-        print("🟡 No label column found — switching to unsupervised mode")
+        print(" No label column found — switching to unsupervised mode")
         labels = None
 
 else:
-    print("📄 Unstructured text detected → unsupervised mode")
+    print(" Unstructured text detected → unsupervised mode")
     labels = None
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-print("🔹 Creating TF-IDF representations for clauses...")
+print(" Creating TF-IDF representations for clauses...")
 
 vectorizer = TfidfVectorizer(max_features=15000, stop_words='english')
 X = vectorizer.fit_transform(clauses)
 
-print(f"✅ TF-IDF matrix created with shape: {X.shape}")
+print(f"TF-IDF matrix created with shape: {X.shape}")
 
-# ============================
+
 # LABEL ALIGNMENT - SMART BLOCK MAPPING
-# ============================
+
 if labels:
     if len(labels) != X.shape[0]:
-        print(f"⚠️ Mismatch detected → clauses={X.shape[0]}, labels={len(labels)}")
-        print("📌 Applying smart proportional label mapping...")
+        print(f" Mismatch detected → clauses={X.shape[0]}, labels={len(labels)}")
+        print(" Applying smart proportional label mapping...")
         new_labels = []
         for i in range(X.shape[0]):
             mapped_index = i * len(labels) // X.shape[0]
             new_labels.append(labels[mapped_index])
         labels = new_labels
-        print(f"✅ Labels aligned: {len(labels)} == {X.shape[0]}")
+        print(f" Labels aligned: {len(labels)} == {X.shape[0]}")
     else:
-        print("✔ Labels already aligned")
+        print(" Labels already aligned")
 
 
-# ============================================================
+
 # MODEL TRAINING (SUPERVISED IF LABELS EXIST, OTHERWISE REGRESSION)
-# ============================================================
+
 import numpy as np
 import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
@@ -210,7 +187,7 @@ model = None
 print(labels)
 
 if labels:
-    print("\n🤖 MODE: SUPERVISED CLASSIFICATION (TRAIN ONLY)")
+    print("\n MODE: SUPERVISED CLASSIFICATION (TRAIN ONLY)")
     le = LabelEncoder()
     y = le.fit_transform(labels)
     dtrain = xgb.DMatrix(X, label=y)
@@ -220,20 +197,20 @@ if labels:
         "eval_metric": "mlogloss"
     }
     model = xgb.train(params, dtrain, num_boost_round=250)
-    print("✅ Classification model trained successfully!")
+    print("Classification model trained successfully!")
 
 # ---------------------- REGRESSION FALLBACK ----------------------
 if not labels:
-    print("\n🤖 MODE: UNSUPERVISED REGRESSION (TRAIN ONLY)")
+    print("\n MODE: UNSUPERVISED REGRESSION (TRAIN ONLY)")
     y_dummy = np.mean(X.toarray(), axis=1)
     synthetic_labels = y_dummy.copy()
     dtrain = xgb.DMatrix(X, label=y_dummy)
     params = {"objective": "reg:squarederror", "eval_metric": "rmse"}
     model = xgb.train(params, dtrain, num_boost_round=250)
     pred_scores = model.predict(dtrain)
-    print("✅ Regression model trained successfully!")
+    print("Regression model trained successfully!")
 
-print("\n🎯 Training Completed. Model Ready for Use.")
+print("\n Training Completed. Model Ready for Use.")
 print(model)
 
 from sklearn.metrics import (
@@ -247,12 +224,12 @@ import numpy as np
 
 print(model)
 if model is None:
-    print("❌ No trained model found. Please run training cell first.")
+    print(" No trained model found. Please run training cell first.")
 
 # ------------------------- SUPERVISED EVALUATION -------------------------
 elif labels is not None:
-    print("\n🟢 DETECTED MODE: SUPERVISED CLASSIFICATION")
-    print("📌 Evaluating using true labels (no train/test split)")
+    print("\n DETECTED MODE: SUPERVISED CLASSIFICATION")
+    print(" Evaluating using true labels (no train/test split)")
 
     le = LabelEncoder()
     y_true = le.fit_transform(labels)
@@ -266,7 +243,7 @@ elif labels is not None:
     rec = recall_score(y_true, preds, average="weighted", zero_division=0)
     f1 = f1_score(y_true, preds, average="weighted", zero_division=0)
 
-    print("\n📊 SUPERVISED METRICS:")
+    print("\n SUPERVISED METRICS:")
     print(f"Accuracy :  {acc:.4f}")
     print(f"Precision: {prec:.4f}")
     print(f"Recall   : {rec:.4f}")
@@ -274,8 +251,8 @@ elif labels is not None:
 
 # ------------------------ UNSUPERVISED EVALUATION ------------------------
 else:
-    print("\n🟡 DETECTED MODE: UNSUPERVISED REGRESSION")
-    print("📌 Evaluating using synthetic labels")
+    print("\n DETECTED MODE: UNSUPERVISED REGRESSION")
+    print(" Evaluating using synthetic labels")
 
     dfull = xgb.DMatrix(X)
     pred_scores_eval = model.predict(dfull)
@@ -284,7 +261,7 @@ else:
     mae = mean_absolute_error(synthetic_labels, pred_scores_eval)
     r2 = r2_score(synthetic_labels, pred_scores_eval)
 
-    print("\n📊 SYNTHETIC REGRESSION METRICS:")
+    print("\n SYNTHETIC REGRESSION METRICS:")
     print(f"RMSE: {rmse:.6f}")
     print(f"MAE : {mae:.6f}")
     print(f"R²  : {r2:.6f}")
@@ -309,7 +286,7 @@ def retrieve_answers(question, X, clauses, vectorizer, top_k=3, sentence_level=T
     # Sort top matching indices
     top_indices = similarities.argsort()[-top_k:][::-1]
 
-    print(f"❓ QUESTION: {question}")
+    print(f" QUESTION: {question}")
 
     for rank, idx in enumerate(top_indices, start=1):
         text = clauses[idx]
@@ -326,7 +303,7 @@ def retrieve_answers(question, X, clauses, vectorizer, top_k=3, sentence_level=T
         else:
             best_sentence = text
 
-        print(f"🔹 Top {rank} (score={similarities[idx]:.4f})")
+        print(f" Top {rank} (score={similarities[idx]:.4f})")
         print(best_sentence)
         print("-" * 60)
 
@@ -359,7 +336,7 @@ def explode_sentences_into_snippets(sentences, min_words=4):
             p = p.strip()
             if len(p.split()) >= min_words:
                 new_units.append(p)
-    print(f"🔹 Expanded {len(sentences)} sentences → {len(new_units)} snippets")
+    print(f" Expanded {len(sentences)} sentences → {len(new_units)} snippets")
     return new_units
 
 snippets = explode_sentences_into_snippets(clauses)
@@ -406,13 +383,11 @@ def hybrid_search(question, top_k=5, w_bm25=0.4, w_tfidf=0.3, w_sem=0.3):
     final_scores = w_bm25*bm25_norm + w_tfidf*tfidf_norm + w_sem*sem_norm
     best_idx = final_scores.argsort()[-top_k:][::-1]
 
-    print(f"\n============================")
-    print(f"❓ QUESTION: {question}")
-    print("============================\n")
+    print(f"QUESTION: {question}")
 
     for rank, idx in enumerate(best_idx, 1):
         score = final_scores[idx]
-        print(f"🔹 Match {rank} | Score={score:.3f}")
+        print(f" Match {rank} | Score={score:.3f}")
         print(highlight(snippets[idx], question))
         print("-"*70)
 
@@ -426,9 +401,9 @@ questions = [
 for q in questions:
     hybrid_search(q, top_k=5)
 
-# ============================================================
+
 # PREPARE TRAINING DATA FOR LLM FINE-TUNING
-# ============================================================
+
 from datasets import Dataset
 
 # Generate Q&A pairs from document snippets
@@ -454,11 +429,11 @@ def generate_training_data(snippets, num_samples=100):
 training_samples = generate_training_data(snippets, num_samples=100)
 dataset = Dataset.from_list(training_samples)
 
-print(f"✅ Created {len(training_samples)} training samples")
+print(f"Created {len(training_samples)} training samples")
 
-# ============================================================
-# MODEL 1: FINE-TUNE DISTILGPT-2 (SMALL, FAST, 100% FREE)
-# ============================================================
+
+# MODEL 1: FINE-TUNE DISTILGPT-2 
+
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -470,7 +445,7 @@ from peft import LoraConfig, get_peft_model, TaskType
 import torch
 
 print("\n" + "="*60)
-print("🔥 MODEL 1: Fine-tuning DistilGPT-2 (FREE, NO TOKEN REQUIRED)")
+print(" MODEL 1: Fine-tuning DistilGPT-2 (FREE, NO TOKEN REQUIRED)")
 print("="*60)
 
 model1_name = "distilgpt2"  # 100% free, no access token needed
@@ -518,13 +493,12 @@ trainer1 = Trainer(
 )
 
 trainer1.train()
-print("✅ DistilGPT-2 fine-tuning completed!")
+print(" DistilGPT-2 fine-tuning completed!")
 
-# ============================================================
 # MODEL 2: FINE-TUNE FLAN-T5-SMALL (FREE, NO TOKEN REQUIRED)
-# ============================================================
+
 print("\n" + "="*60)
-print("🔥 MODEL 2: Fine-tuning FLAN-T5-Small (FREE, NO TOKEN REQUIRED)")
+print(" MODEL 2: Fine-tuning FLAN-T5-Small (FREE, NO TOKEN REQUIRED)")
 print("="*60)
 
 from transformers import T5Tokenizer, T5ForConditionalGeneration
@@ -572,11 +546,11 @@ trainer2 = Trainer(
 )
 
 trainer2.train()
-print("✅ FLAN-T5-Small fine-tuning completed!")
+print("FLAN-T5-Small fine-tuning completed!")
 
-# ============================================================
+
 # INFERENCE & COMPARISON (2 FINE-TUNED MODELS ONLY)
-# ============================================================
+
 import time
 import numpy as np
 
@@ -629,7 +603,7 @@ def generate_answer_t5(question, max_length=128):
 def compare_models(question):
     """Compare answers from both fine-tuned models"""
     print("\n" + "="*80)
-    print(f"❓ QUESTION: {question}")
+    print(f" QUESTION: {question}")
     print("="*80 + "\n")
 
     # Model 1: DistilGPT-2
@@ -639,12 +613,12 @@ def compare_models(question):
         time1 = time.time() - start
 
         print(f"🤖 MODEL 1: DistilGPT-2 (Fine-tuned)")
-        print(f"   ⏱️  Time: {time1:.3f}s")
-        print(f"   📝 Answer: {answer1}")
+        print(f"    Time: {time1:.3f}s")
+        print(f"   Answer: {answer1}")
         print()
 
     except Exception as e:
-        print(f"❌ Error in DistilGPT-2: {e}\n")
+        print(f"Error in DistilGPT-2: {e}\n")
         answer1 = "Error generating answer"
         time1 = 0
 
@@ -654,13 +628,13 @@ def compare_models(question):
         answer2 = generate_answer_t5(question)
         time2 = time.time() - start
 
-        print(f"🤖 MODEL 2: FLAN-T5-Small (Fine-tuned)")
-        print(f"   ⏱️  Time: {time2:.3f}s")
-        print(f"   📝 Answer: {answer2}")
+        print(f" MODEL 2: FLAN-T5-Small (Fine-tuned)")
+        print(f"     Time: {time2:.3f}s")
+        print(f"    Answer: {answer2}")
         print()
 
     except Exception as e:
-        print(f"❌ Error in FLAN-T5: {e}\n")
+        print(f" Error in FLAN-T5: {e}\n")
         answer2 = "Error generating answer"
         time2 = 0
 
@@ -672,9 +646,9 @@ def compare_models(question):
         "flan_t5": {"answer": answer2, "time": time2, "length": len(answer2.split())},
     }
 
-# ============================================================
+
 # TEST QUESTIONS
-# ============================================================
+
 test_questions = [
     "Is there any limitation of liability?",
     "What is the warranty period?",
@@ -683,7 +657,7 @@ test_questions = [
 ]
 
 print("\n" + "="*80)
-print("🚀 COMPARING FINE-TUNED MODELS")
+print("COMPARING FINE-TUNED MODELS")
 print("="*80)
 print(f"Testing {len(test_questions)} questions")
 print(f"Models: DistilGPT-2 vs FLAN-T5-Small\n")
@@ -699,16 +673,16 @@ for i, q in enumerate(test_questions, 1):
     if result is not None:
         results.append(result)
     else:
-        print(f"⚠️ Skipping question {i} due to errors")
+        print(f"Skipping question {i} due to errors")
 
-print(f"\n✅ Successfully processed {len(results)}/{len(test_questions)} questions")
+print(f"\nSuccessfully processed {len(results)}/{len(test_questions)} questions")
 
-# ============================================================
+
 # PERFORMANCE SUMMARY & COMPARISON
-# ============================================================
+
 if results:
     print("\n" + "="*80)
-    print("📊 COMPREHENSIVE PERFORMANCE SUMMARY")
+    print(" COMPREHENSIVE PERFORMANCE SUMMARY")
     print("="*80 + "\n")
 
     # Calculate averages
@@ -719,20 +693,20 @@ if results:
     t5_lengths = [r["flan_t5"]["length"] for r in results]
 
     # Time comparison
-    print("⏱️  INFERENCE SPEED:")
+    print("  INFERENCE SPEED:")
     print(f"   DistilGPT-2:    {np.mean(gpt2_times):.3f}s average")
     print(f"   FLAN-T5-Small:  {np.mean(t5_times):.3f}s average")
 
     speed_winner = "DistilGPT-2" if np.mean(gpt2_times) < np.mean(t5_times) else "FLAN-T5-Small"
-    print(f"   🏆 Fastest: {speed_winner}\n")
+    print(f"   Fastest: {speed_winner}\n")
 
     # Answer length comparison
-    print("📏 ANSWER LENGTH (words):")
+    print(" ANSWER LENGTH (words):")
     print(f"   DistilGPT-2:    {np.mean(gpt2_lengths):.1f} words average")
     print(f"   FLAN-T5-Small:  {np.mean(t5_lengths):.1f} words average\n")
 
     # Detailed comparison table
-    print("📋 DETAILED RESULTS:")
+    print("DETAILED RESULTS:")
     print("-" * 80)
     print(f"{'Question':<50} {'GPT-2 Time':<15} {'T5 Time':<15}")
     print("-" * 80)
@@ -746,22 +720,22 @@ if results:
     print("-" * 80)
 
     # Quality metrics
-    print("\n💡 QUALITY OBSERVATIONS:")
-    print(f"   • DistilGPT-2 generated answers with avg {np.mean(gpt2_lengths):.0f} words")
-    print(f"   • FLAN-T5 generated answers with avg {np.mean(t5_lengths):.0f} words")
+    print("\n QUALITY OBSERVATIONS:")
+    print(f"    DistilGPT-2 generated answers with avg {np.mean(gpt2_lengths):.0f} words")
+    print(f"    FLAN-T5 generated answers with avg {np.mean(t5_lengths):.0f} words")
 
     if np.mean(gpt2_lengths) > np.mean(t5_lengths) * 1.5:
-        print(f"   • DistilGPT-2 tends to be more verbose")
+        print(f"    DistilGPT-2 tends to be more verbose")
     elif np.mean(t5_lengths) > np.mean(gpt2_lengths) * 1.5:
-        print(f"   • FLAN-T5 tends to be more verbose")
+        print(f"    FLAN-T5 tends to be more verbose")
     else:
-        print(f"   • Both models produce similar length answers")
+        print(f"    Both models produce similar length answers")
 
-    print("\n✅ Model comparison complete!")
-    print("💡 Tip: Review individual answers above to assess quality and relevance")
+    print("\nModel comparison complete!")
+    print("Tip: Review individual answers above to assess quality and relevance")
 
 else:
-    print("\n❌ No results to summarize - all queries failed")
-    print("💡 Make sure both models are properly fine-tuned before running comparison")
+    print("\nNo results to summarize - all queries failed")
+    print("Make sure both models are properly fine-tuned before running comparison")
 
 print("\n" + "="*80)
