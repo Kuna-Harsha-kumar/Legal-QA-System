@@ -1,43 +1,17 @@
 The current model is using CAUD database.The model can be trained only on a single document.The below are the sample results : 
 
-In the results 
-Result 1 it is the results of Intial model(XGBoost+TF-IDF)
-result 2 it is the results for pre trained model
-Result 3 is the results for comparing both the models
 
-🧾 =====================================================
-💬 QUESTION: What is the minimum commitment?
-========================================================
+The below results shows the results when there are labels in the document,so that supervised method is followed
 
-🔹 TF-IDF / XGBoost Top Clauses:
-  1. (Score=0.335) SCOUTCAMINC 05 12 2020--SERVICES AGREEMENT.PDF The Company may in its discretion and at its option terminate this Agreement at any time after the Minimum Period upon five days prior written notice to ...
-  2. (Score=0.095) EUROPEANMICROHOLDINGSINC 03 06 1998--DISTRIBUTOR AGREEMENT.PDF Upon the occurrence of any of the following, WGT may terminate the Term by giving Distributor written notice of such termination for: omi...
-  3. (Score=0.061) SEPARATEACCOUNTIIOFAGL 05 02 2011-.(J)(4)-UNCONDITIONAL CAPITAL MAINTENANCE AGREEMENT.PDF AIG shall have the absolute right to terminate this Agreement upon thirty (30) days prior written notice to th...
+<xgboost.core.Booster object at 0x788777f99a00>
 
-🔸 Pretrained Embedding Model Top Clauses:
-  1. (Score=0.398) TRANSMONTAIGNEPARTNERSLLC 03 13 2020--SERVICES AGREEMENT.PDF This Agreement may be terminated by (a) the written agreement of the Parties or (b) by either Party upon 5 days written notice to the other...
-  2. (Score=0.384) TELEGLOBEINTERNATIONALHOLDINGSLTD 03 29 2004--CONSTRUCTION AND MAINTENANCE AGREEMENT.PDF However, any Party may terminate its participation in this Agreement at the end of the Initial Period or any ti...
-  3. (Score=0.381) IPAYMENT,INC 05 14 2007--SPONSORSHIP AGREEMENT.PDF SERVICERS may terminate this Agreement prior to its expiration for cause upon prior written notice to ISO as follows: omitted (k) Upon the terminatio...
+🟢 DETECTED MODE: SUPERVISED CLASSIFICATION
+📌 Evaluating using true labels (no train/test split)
 
-🤖 FLAN-T5 Legal Summary:
-A minimum commitment is a minimum commitment.
---------------------------------------------------------
+📊 SUPERVISED METRICS:
+Accuracy :  0.5510
+Precision: 0.4123
+Recall   : 0.5510
+F1 Score : 0.4510
 
-
-🧾 =====================================================
-💬 QUESTION: Are there any penalties for breach or termination?
-========================================================
-
-🔹 TF-IDF / XGBoost Top Clauses:
-  1. (Score=0.329) NEXSTARFINANCEHOLDINGSINC 03 27 2002--OUTSOURCING AGREEMENT.PDF This Agreement may be terminated by Nexstar by written notice to WYZZ (i) any time upon six (6) months prior notice, (ii) on six (6) mon...
-  2. (Score=0.242) AzulSa 20170303 F-1A 9943903 Maintenance Agreement1.pdf Early termination fee: subject to not being in breach of any of its obligation under the Agreement, the Company may terminate this Agreement for...
-  3. (Score=0.199) VAXCYTE,INC 05 22 2020--SUPPLY AGREEMENT.PDF Notwithstanding anything to the contrary in this Supply Agreement, this Supply Agreement may be terminated: 10.2.1 in its entirety or with respect to one o...
-
-🔸 Pretrained Embedding Model Top Clauses:
-  1. (Score=0.421) BICYCLETHERAPEUTICSPLC 03 10 2020--SERVICE AGREEMENT.PDF Without prejudice to the Company s right to summarily terminate your employment in accordance with paragraph 11.3 below and your right to summa...
-  2. (Score=0.417) NEXSTARFINANCEHOLDINGSINC 03 27 2002--OUTSOURCING AGREEMENT.PDF This Agreement may be terminated by Nexstar by written notice to WYZZ (i) any time upon six (6) months prior notice, (ii) on six (6) mon...
-  3. (Score=0.416) WPPPLC 04 30 2020--SERVICE AGREEMENT.PDF The Appointment may be terminated by either party giving the other at least 12 months notice in writing. () 15.2 The Company may in its sole and absolute discr...
-
-🤖 FLAN-T5 Legal Summary:
-()
---------------------------------------------------------
+The below results show  the results when there are no labels and model is following unsupervised method(regression)
