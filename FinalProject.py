@@ -20,6 +20,8 @@ from rouge_score import rouge_scorer
 from nltk.translate.bleu_score import sentence_bleu
 from bert_score import score as bertscore
 import torch
+from rank_bm25 import BM25Okapi
+from sklearn.model_selection import train_test_split
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -190,6 +192,8 @@ if len(unique_labels_struct) <= 1:
 else:
     labels = labels_struct
 print(f"Final label set size: {len(set(labels))}")
+labels_clean = clean_labels_for_stratification(labels)
+labels_master = labels_clean
 
 
 def clean_labels_for_stratification(labels):
@@ -279,7 +283,6 @@ def explode_sentences_into_snippets(sentences, min_words=4):
     return new_units
 snippets = explode_sentences_into_snippets(clauses)
 
-from rank_bm25 import BM25Okapi
 
 # TF-IDF for snippets
 vectorizer_snip = TfidfVectorizer(stop_words='english', max_features=10000, ngram_range=(1,3))
@@ -380,7 +383,6 @@ test_hybrid_qs = [
 for q in test_hybrid_qs:
     hybrid_xgb_search(q, top_k=5)
 
-from sklearn.model_selection import train_test_split
 
 # Build training dataset directly from real clauses (NO synthetic labels)
 def make_llm_training_data(clauses):
