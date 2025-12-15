@@ -605,9 +605,9 @@ def generate_answer_T5(question, top_k=3, max_new_tokens=120):
     snip_idx = hybrid_xgb_search(question, top_k=top_k)
     # Truncate snippets
     def safe_snip(text, max_tokens=110):
-        ids = tokenizer1.encode(text)
+        ids = tokenizer2.encode(text)
         ids = ids[:max_tokens]
-        return tokenizer1.decode(ids)
+        return tokenizer2.decode(ids)
     context_snips = [safe_snip(snippets[i]) for i in snip_idx]
     context = "\n".join(context_snips)
     # Build prompt
@@ -618,7 +618,7 @@ def generate_answer_T5(question, top_k=3, max_new_tokens=120):
         f"### Question: {question}\n### Answer:"
     )
     # Tokenize
-    inputs = tokenizer1(
+    inputs = tokenizer2(
         prompt,
         return_tensors="pt",
         truncation=True,
@@ -627,9 +627,9 @@ def generate_answer_T5(question, top_k=3, max_new_tokens=120):
     input_len = inputs["input_ids"].shape[1]
     if torch.cuda.is_available():
         inputs = {k: v.to("cuda") for k, v in inputs.items()}
-        model1.to("cuda")
+        model2.to("cuda")
     # Generate only new tokens
-    outputs = model1.generate(
+    outputs = model2.generate(
         **inputs,
         max_new_tokens=max_new_tokens,
         num_beams=4,
@@ -640,7 +640,7 @@ def generate_answer_T5(question, top_k=3, max_new_tokens=120):
     )
     # Decode ONLY the generated portion
     gen_tokens = outputs[0][input_len:]
-    raw_answer = tokenizer1.decode(gen_tokens, skip_special_tokens=True).strip()
+    raw_answer = tokenizer2.decode(gen_tokens, skip_special_tokens=True).strip()
     # Remove leaked prompt text
     cut_markers = ["### Question", "### Clauses", "### Instruction"]
     for m in cut_markers:
@@ -650,8 +650,7 @@ def generate_answer_T5(question, top_k=3, max_new_tokens=120):
     # Fallback for empty or useless answers
     if raw_answer == "" or raw_answer.lower() in ["none", "none.", "yes.", "yes"]:
         raw_answer = "Not clearly specified."
-    return raw_answer.strip()
-
+    return raw_answer.strip(). 
 test_questions = [
     "Is liability capped or uncapped for indirect damages?",
     "What happens if either party terminates the agreement?",
