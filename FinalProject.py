@@ -543,53 +543,62 @@ trainer2 = Trainer(
 trainer2.train()
 print(" FLAN-T5-Small fine-tuning completed!")
 
-def generate_answer_gpt2(question, top_k=3, max_new_tokens=120):
+def generate_answer_gpt2(question, top_k=3, max_new_tokens=50):
     snip_idx = hybrid_xgb_search(question, top_k=top_k)
-    def safe_snip(text, max_tokens=110):
+    def safe_snip(text, max_tokens=50):  #REDUCED
         ids = tokenizer1.encode(text)
         ids = ids[:max_tokens]
         return tokenizer1.decode(ids)
+
     context_snips = [safe_snip(snippets[i]) for i in snip_idx]
     context = "\n".join(context_snips)
-    # Add "Summary:" because GPT-2 shifts modes
+
     prompt = (
-        "You are a legal assistant. Give a short answer based ONLY on the clauses.\n"
-        "Do NOT rewrite or continue the contract. Provide a direct answer.\n\n"
-        f"--- CONTRACT EXCERPTS ---\n{context}\n"
-        "--- END EXCERPTS ---\n\n"
+        "You are a legal assistant.\n"
+        "Answer the question using ONLY the clauses below.\n"
+        "If the answer is not explicit, say: Not clearly specified.\n\n"
+        f"CLAUSES:\n{context}\n\n"
         f"QUESTION: {question}\n"
-        "ANSWER (one sentence): "
+        "ANSWER (one sentence only):"
     )
+
     inputs = tokenizer1(
         prompt,
         return_tensors="pt",
         truncation=True,
-        max_length=900
+        max_length=700  #REDUCED
     )
+
     input_len = inputs["input_ids"].shape[1]
+
     if torch.cuda.is_available():
         inputs = {k: v.to("cuda") for k, v in inputs.items()}
         model1.to("cuda")
+
     outputs = model1.generate(
-        **inputs,
-        max_new_tokens=max_new_tokens,
-        num_beams=5,
-        do_sample=False,
-        no_repeat_ngram_size=3,
-        repetition_penalty=1.15,
-        early_stopping=True
-    )
+    **inputs,
+    max_new_tokens=40,
+    num_beams=1,
+    do_sample=False,
+    repetition_penalty=1.3,
+    no_repeat_ngram_size=4,
+    eos_token_id=tokenizer1.eos_token_id,
+    pad_token_id=tokenizer1.eos_token_id
+)
+
     gen_tokens = outputs[0][input_len:]
     answer = tokenizer1.decode(gen_tokens, skip_special_tokens=True).strip()
-    # Clean out junk
-    for m in ["QUESTION:", "CONTRACT", "EXCERPTS", "ANSWER", "---"]:
-        idx = answer.find(m)
-        if idx > 0:
-            answer = answer[:idx].strip()
-    # Fallback for hallucinations
-    if len(answer.split()) < 2 or any(w in answer.lower() for w in ["adma", "bathes", "payment"]):
-        answer = "Not clearly specified in the provided clauses."
+
+    # Hard cleanup
+    for marker in ["QUESTION:", "CLAUSES:", "ANSWER", "---"]:
+        if marker in answer:
+            answer = answer.split(marker)[0].strip()
+
+    if answer.strip() == "":
+      answer = "Not clearly specified in the provided clauses."
+
     return answer
+
 
 test_questions = [
     "Is liability capped or uncapped for indirect damages?",
@@ -602,57 +611,63 @@ for q in test_questions:
      print(ans1)
 print("\n Hybrid legal analysis pipeline finished (XGBoost + 2 fine-tuned LLMs).")
 
-def generate_answer_T5(question, top_k=3, max_new_tokens=120):
-    # Retrieve relevant clauses
+def generate_answer_T5(question, top_k=3, max_new_tokens=80):
     snip_idx = hybrid_xgb_search(question, top_k=top_k)
-    # Truncate snippets
-    def safe_snip(text, max_tokens=110):
+
+    def safe_snip(text, max_tokens=80):  #  reduced
         ids = tokenizer2.encode(text)
         ids = ids[:max_tokens]
         return tokenizer2.decode(ids)
+
     context_snips = [safe_snip(snippets[i]) for i in snip_idx]
     context = "\n".join(context_snips)
-    # Build prompt
+
     prompt = (
-        "### Instruction: Using ONLY the following contract clauses, answer the legal question. "
-        "If the clauses do not specify an answer, say: 'Not clearly specified.'\n\n"
-        f"### Clauses:\n{context}\n\n"
-        f"### Question: {question}\n### Answer:"
+        "You are a legal assistant.\n"
+        "Answer the question using ONLY the clauses below.\n"
+        "Give a cautious, concise legal summary.\n"
+        "If the answer is not stated, say: Not clearly specified.\n\n"
+        f"CLAUSES:\n{context}\n\n"
+        f"QUESTION: {question}\n"
+        "ANSWER:"
     )
-    # Tokenize
+
     inputs = tokenizer2(
         prompt,
         return_tensors="pt",
         truncation=True,
-        max_length=900       # keep below 1024 limit
+        max_length=512   # 🔹 reduced
     )
-    input_len = inputs["input_ids"].shape[1]
+
     if torch.cuda.is_available():
         inputs = {k: v.to("cuda") for k, v in inputs.items()}
         model2.to("cuda")
-    # Generate only new tokens
+
     outputs = model2.generate(
         **inputs,
         max_new_tokens=max_new_tokens,
         num_beams=4,
         do_sample=False,
         no_repeat_ngram_size=3,
-        repetition_penalty=1.2,
+        repetition_penalty=1.1,
         early_stopping=True
     )
-    # Decode ONLY the generated portion
-    gen_tokens = outputs[0][input_len:]
-    raw_answer = tokenizer2.decode(gen_tokens, skip_special_tokens=True).strip()
-    # Remove leaked prompt text
-    cut_markers = ["### Question", "### Clauses", "### Instruction"]
-    for m in cut_markers:
-        idx = raw_answer.find(m)
-        if idx > 0:
-            raw_answer = raw_answer[:idx].strip()
-    # Fallback for empty or useless answers
-    if raw_answer == "" or raw_answer.lower() in ["none", "none.", "yes.", "yes"]:
+
+    raw_answer = tokenizer2.decode(outputs[0], skip_special_tokens=True)
+
+
+    # Remove prompt echoes safely
+    for marker in ["CLAUSES:", "QUESTION:", "ANSWER:"]:
+        if marker in raw_answer:
+            raw_answer = raw_answer.split(marker)[-1].strip()
+
+    # MUCH SAFER fallback
+    if raw_answer.strip() == "":
         raw_answer = "Not clearly specified."
-    return raw_answer.strip(). 
+
+    return raw_answer
+
+
 test_questions = [
     "Is liability capped or uncapped for indirect damages?",
     "What happens if either party terminates the agreement?",
